@@ -6,13 +6,13 @@ import {
   RefreshControl,
   TouchableOpacity,
   TextInput,
-  ScrollView,
   FlatList,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ProductCard from "../../components/products/productCard";
 import { productAPI } from "../../services/api";
 import theme from "../../theme";
+import { Ionicons } from "@expo/vector-icons";
 
 const HomeScreen = ({ navigation }) => {
   const [products, setProducts] = useState([]);
@@ -67,20 +67,6 @@ const HomeScreen = ({ navigation }) => {
     fetchProducts();
   };
 
-  const renderProduct = ({ item, index }) => (
-    <View
-      style={[
-        styles.productContainer,
-        index % 2 === 0 ? styles.productLeft : styles.productRight,
-      ]}
-    >
-      <ProductCard
-        product={item}
-        onPress={() => console.log("Product pressed:", item.id)}
-      />
-    </View>
-  );
-
   const renderCategory = ({ item }) => (
     <TouchableOpacity
       style={[
@@ -88,6 +74,7 @@ const HomeScreen = ({ navigation }) => {
         selectedCategory === item.id && styles.categoryChipActive,
       ]}
       onPress={() => setSelectedCategory(item.id)}
+      activeOpacity={0.7}
     >
       <Text
         style={[
@@ -100,25 +87,46 @@ const HomeScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+  const renderProduct = ({ item }) => (
+    <View style={styles.productWrapper}>
+      <ProductCard
+        product={item}
+        onPress={() => {
+          console.log("🔵 Product clicked:", item.id);
+          navigation.navigate("ProductDetail", {
+            productId: item.id,
+          });
+        }}
+      />
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
+      {/* Minimal Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Discover</Text>
-        <Text style={styles.headerSubtitle}>Find your style</Text>
+        <Text style={styles.headerTitle}>ivy</Text>
+
+        <View style={styles.searchContainer}>
+          <Ionicons
+            name="search-outline"
+            size={18}
+            color={theme.colors.text.tertiary}
+            style={styles.searchIcon}
+          />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search"
+            placeholderTextColor={theme.colors.text.tertiary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
       </View>
 
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search products..."
-          placeholderTextColor={theme.colors.text.tertiary}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
+      {/* Categories - Minimal Pills */}
       <FlatList
-        horizontal
+        horizontal={true}
         data={categories}
         renderItem={renderCategory}
         keyExtractor={(item) => String(item.id)}
@@ -127,8 +135,15 @@ const HomeScreen = ({ navigation }) => {
         style={styles.categoriesList}
       />
 
-      <ScrollView
+      {/* Products Grid - Clean Layout */}
+      <FlatList
+        data={products}
+        renderItem={renderProduct}
+        keyExtractor={(item) => String(item.id)}
+        numColumns={2}
+        columnWrapperStyle={styles.productRow}
         contentContainerStyle={styles.productsContainer}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -136,26 +151,14 @@ const HomeScreen = ({ navigation }) => {
             tintColor={theme.colors.primary}
           />
         }
-      >
-        {products.length === 0 ? (
+        ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
               {loading ? "Loading..." : "No products found"}
             </Text>
           </View>
-        ) : (
-          <View style={styles.productsGrid}>
-            {products.map((item, index) => (
-              <View key={item.id} style={styles.productContainer}>
-                <ProductCard
-                  product={item}
-                  onPress={() => console.log("Product pressed:", item.id)}
-                />
-              </View>
-            ))}
-          </View>
-        )}
-      </ScrollView>
+        }
+      />
     </SafeAreaView>
   );
 };
@@ -163,88 +166,101 @@ const HomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: "#FAFAFA", // Soft off-white background
   },
   header: {
+    flexDirection: "row",
+    alignItems: "center", // Ensures "ivy" and search bar align vertically
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    backgroundColor: "#FAFAFA",
+    gap: 15, // Adds space between title and search bar
   },
   headerTitle: {
-    fontSize: theme.typography.sizes.xxxl,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-    letterSpacing: -0.5,
-  },
-  headerSubtitle: {
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.text.secondary,
-    marginTop: theme.spacing.xs,
+    fontSize: 28,
+    fontWeight: "400",
+    color: "#1A1A1A",
+    letterSpacing: 1.5,
+    textTransform: "lowercase",
+    // Remove justifyContent from here if it was there
   },
   searchContainer: {
-    paddingHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
+    flex: 1, // 👈 CHANGE THIS: It will take up remaining width correctly
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    height: 40, // 👈 ADD THIS: Fixed height looks better for search
+    borderWidth: 1, // 2 was a bit thick for minimalist look
+    borderColor: "#E8E8E8",
+  },
+  searchIcon: {
+    marginRight: 6,
   },
   searchInput: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.text.primary,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    flex: 1,
+    fontSize: 13,
+    color: "#1A1A1A",
+    fontWeight: "400",
   },
   categoriesList: {
-    flexGrow: 0,
-    marginBottom: theme.spacing.md,
+    marginTop: 10,
+    marginBottom: 6,
   },
   categoriesContainer: {
     paddingHorizontal: theme.spacing.lg,
+    paddingVertical: 8,
+    height: 50,
+    flexDirection: "row",
+    alignItems: "center",
   },
   categoryChip: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.round,
-    marginRight: theme.spacing.sm,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: "transparent",
+    borderRadius: 20,
+    marginRight: 8,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: "#D0D0D0",
+    alignSelf: "center",
   },
   categoryChipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: "#1A1A1A",
+    borderColor: "#1A1A1A",
   },
   categoryText: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.text.primary,
-    fontWeight: theme.typography.weights.medium,
+    fontSize: 13,
+    color: "#4A4A4A",
+    fontWeight: "400",
+    letterSpacing: 0.3,
   },
   categoryTextActive: {
-    color: theme.colors.text.inverse,
+    color: "#FFFFFF",
+    fontWeight: "500",
   },
   productsContainer: {
-    paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl * 2,
   },
-  productContainer: {
-    width: "33.33%",
-    paddingHorizontal: theme.spacing.xs,
+  productRow: {
+    justifyContent: "space-between",
+    marginBottom: theme.spacing.lg,
+  },
+  productWrapper: {
+    width: "48%",
   },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: theme.spacing.xxl,
+    paddingVertical: theme.spacing.xxl * 3,
   },
   emptyText: {
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.text.secondary,
-  },
-  productsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    width: "100%",
+    fontSize: 14,
+    color: "#999999",
+    fontWeight: "300",
+    letterSpacing: 0.5,
   },
 });
 

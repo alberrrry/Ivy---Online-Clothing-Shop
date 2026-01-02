@@ -1,67 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  KeyboardAvoidingView,
   Platform,
-  TouchableOpacity,
   Alert,
-} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import Button from '../../components/common/button';
-import Input from '../../components/common/input';
-import { authAPI } from '../../services/api';
-import theme from '../../theme';
+  KeyboardAvoidingView,
+} from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Button from "../../components/common/button";
+import Input from "../../components/common/input";
+import { authAPI } from "../../services/api";
+import theme from "../../theme";
 
 const LoginScreen = ({ navigation }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
   const validateForm = () => {
     const newErrors = {};
-    
-    if (!email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Email is invalid';
-    }
-    
-    if (!password) {
-      newErrors.password = 'Password is required';
-    }
-    
+    if (!email.trim()) newErrors.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = "Email is invalid";
+    if (!password) newErrors.password = "Password is required";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleLogin = async () => {
-  console.log('🔵 LOGIN CLICKED');
-  console.log('📧 Email:', email);
-  
-  if (!validateForm()) {
-    console.log('❌ Validation failed');
-    return;
-  }
-  
-  console.log('✅ Validation passed, sending to API...');
-  setLoading(true);
-  
-  try {
-    console.log('🚀 Making API call...');
-    const response = await authAPI.login({ email, password });
-    console.log('✅ API Response:', response.data);
-      
-      Alert.alert('Success', 'Logged in successfully!');
-      window.location.reload();
-      // Navigation will trigger automatically due to auth state change
+    if (!validateForm()) return;
+    setLoading(true);
+    try {
+      const response = await authAPI.login({ email, password });
+      const { token, user } = response.data;
+      await AsyncStorage.setItem("authToken", token);
+      await AsyncStorage.setItem("user", JSON.stringify(user));
+      Alert.alert("Success", "Logged in successfully!");
+      navigation.replace("Home");
     } catch (error) {
       Alert.alert(
-        'Login Failed',
-        error.response?.data?.error || 'Something went wrong'
+        "Login Failed",
+        error.response?.data?.error || "Something went wrong"
       );
     } finally {
       setLoading(false);
@@ -70,18 +51,18 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
     >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Sign in to continue</Text>
         </View>
-
         <View style={styles.form}>
           <Input
             label="Email"
@@ -91,9 +72,8 @@ const LoginScreen = ({ navigation }) => {
             error={errors.email}
             keyboardType="email-address"
             autoCapitalize="none"
-            autoComplete="email"
+            textContentType={Platform.OS === "ios" ? "emailAddress" : undefined}
           />
-
           <Input
             label="Password"
             placeholder="Enter your password"
@@ -101,13 +81,8 @@ const LoginScreen = ({ navigation }) => {
             onChangeText={setPassword}
             error={errors.password}
             secureTextEntry
-            autoComplete="password"
+            textContentType={Platform.OS === "ios" ? "password" : undefined}
           />
-
-          <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
-
           <Button
             onPress={handleLogin}
             loading={loading}
@@ -115,16 +90,9 @@ const LoginScreen = ({ navigation }) => {
           >
             Sign In
           </Button>
-
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
           <Button
             variant="outline"
-            onPress={() => navigation.navigate('Register')}
+            onPress={() => navigation.navigate("Register")}
           >
             Create Account
           </Button>
@@ -135,18 +103,15 @@ const LoginScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     padding: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
   },
   header: {
     marginBottom: theme.spacing.xl,
-    alignItems: 'center',
+    alignItems: "center",
   },
   title: {
     fontSize: theme.typography.sizes.xxxl,
@@ -161,33 +126,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   form: {
-    width: '100%',
-  },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: theme.spacing.lg,
-  },
-  forgotPasswordText: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.text.secondary,
+    width: "100%",
   },
   loginButton: {
     marginBottom: theme.spacing.lg,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing.lg,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: theme.colors.border,
-  },
-  dividerText: {
-    marginHorizontal: theme.spacing.md,
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.text.tertiary,
   },
 });
 
