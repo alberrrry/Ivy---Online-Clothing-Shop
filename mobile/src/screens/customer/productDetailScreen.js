@@ -13,21 +13,29 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Button from "../../components/common/button";
 import { productAPI } from "../../services/api";
 import theme from "../../theme";
-
-const { width } = Dimensions.get("window");
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const ProductDetailScreen = ({ route, navigation }) => {
   const { productId } = route.params;
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState(null); // To store logged-in user ID
   const [selectedImage, setSelectedImage] = useState(0);
 
   useEffect(() => {
-    fetchProduct();
+    fetchProductAndUser();
   }, []);
 
-  const fetchProduct = async () => {
+  const fetchProductAndUser = async () => {
     try {
+      // 1. Get current user from storage
+      const userData = await AsyncStorage.getItem("user");
+      if (userData) {
+        const user = JSON.parse(userData);
+        setCurrentUserId(user.id);
+      }
+
+      // 2. Fetch product details
       const response = await productAPI.getById(productId);
       setProduct(response.data);
     } catch (error) {
@@ -35,6 +43,32 @@ const ProductDetailScreen = ({ route, navigation }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Delete Listing",
+      "Are you sure you want to remove this item? This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await productAPI.delete(productId);
+              Alert.alert("Success", "Listing removed successfully.");
+              navigation.goBack(); // Return to Home/Browse
+            } catch (error) {
+              Alert.alert(
+                "Error",
+                "You are not authorized to delete this item."
+              );
+            }
+          },
+        },
+      ]
+    );
   };
 
   const hasDiscount =
@@ -70,6 +104,11 @@ const ProductDetailScreen = ({ route, navigation }) => {
 
   const images = product.images || [];
   const currentImage = images[selectedImage];
+  // Determine if current user is the owner
+  // Note: Check your API response to see if it's product.seller_id or product.seller.id
+  const isOwner =
+    currentUserId === product?.seller_id ||
+    currentUserId === product?.seller?.id;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -135,7 +174,10 @@ const ProductDetailScreen = ({ route, navigation }) => {
         {/* Product Info */}
         <View style={styles.infoSection}>
           {/* Seller Name */}
-          <Text style={styles.sellerName}>Sold by {product.seller_name}</Text>
+          <Text style={styles.sellerName}>
+            {isOwner ? "Your Listing" : `Sold by ${product.seller_name}`}
+          </Text>
+          {/* <Text style={styles.sellerName}>Sold by {product.seller_name}</Text> */}
 
           <Text style={styles.productName}>{product.name}</Text>
 
@@ -179,12 +221,21 @@ const ProductDetailScreen = ({ route, navigation }) => {
 
       {/* Bottom Action Bar */}
       <View style={styles.bottomBar}>
-        <Button
-          onPress={() => console.log("Message seller")}
-          style={styles.messageButton}
-        >
-          Message Seller
-        </Button>
+        {isOwner ? (
+          <Button
+            onPress={handleDelete}
+            style={[styles.messageButton, { backgroundColor: "#8B3A3A" }]} // Red for delete
+          >
+            Delete Listing
+          </Button>
+        ) : (
+          <Button
+            onPress={() => console.log("Message seller")}
+            style={styles.messageButton}
+          >
+            Message Seller
+          </Button>
+        )}
       </View>
     </SafeAreaView>
   );
